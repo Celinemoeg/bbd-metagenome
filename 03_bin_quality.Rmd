@@ -88,4 +88,34 @@ Change directory to the `checkm` folder.
 cd ~/bbd-metagenome/checkm
 ```
 
-- remeber i can run the gtdb and prok at the same time - should do this today so it can run over night
+view the results in the terminal using `cat`, `head`, `more` or `less` commands.
+
+```{bash}
+head checkm_results_bbd.txt 
+```
+
+try viewing more results:
+
+```{bash}
+head -n 20 checkm_results_bbd.txt 
+```
+
+focus on bins with a completeness greater than 15%
+
+This command should print only the lines where the 13th column has a value greater than 15.
+
+```{bash}
+cat checkm_results_bbd.txt | awk '$13>15'
+```
+
+This seems to be the bins we want but we just want the bin ID not the entire line. To get this we can use the print command
+
+```{bash}
+cat checkm_results_bbd.txt | awk '$13>15{print $1}'
+```
+
+send this output to a file so that we can use it in the next step
+
+```{bash}
+cat checkm_results_bbd.txt | awk '$13>15{print $1}' > bbd_topbins.txt
+```
