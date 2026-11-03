@@ -26,8 +26,6 @@ bash chunk. R chunks run from the top of the repository.
 
 Assembly of the BBD nanopore reads with Flye. Commands for this step were run in `flye/`.
 
-## **Assembly**
-
 Change directory into `flye` and then make a symbolic link to the bbd read data
 
 ```{bash}
