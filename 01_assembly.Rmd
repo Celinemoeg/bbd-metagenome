@@ -24,6 +24,16 @@ bash chunk. R chunks run from the top of the repository.
 -->
 ```
 
+notes:
+
+- in here take notes sutch as:
+
+- a fly was run with the fly script "file name" (can actually make a directly link to that file)
+
+- it ran for xx minutes and final assmebly was then assesed to identify the longest contigs.
+
+- remeber to submit the changes and comit an push it up
+
 Assembly of the BBD nanopore reads with Flye. Commands for this step were run in `flye/`.
 
 Change directory into `flye` and then make a symbolic link to the bbd read data
