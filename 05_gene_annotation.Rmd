@@ -89,3 +89,5 @@ sbatch run_prokka.sh
 495 bigmem run_gtdb jd140184
 
 498 work run_prok jd140184
+
+both are done so i can continue
