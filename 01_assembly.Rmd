@@ -35,7 +35,7 @@ ln -s /pvol/data/metagenome_assembly/bbd_0.1.fastq.gz . #symbolick link
 
 create a new shell script:
 
-name: run_flye_bbd.sh
+name: run_flye_bbd.shg
 
 ssave it in flye
 
@@ -59,6 +59,6 @@ sbatch run_flye_bbd.sh
 
 follow the queue
 
-```{r}
+```{bash}
 squeue
 ```
