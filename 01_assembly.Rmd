@@ -39,7 +39,7 @@ create a new shell script:
 
 name: run_flye_bbd.sh
 
-save it in flye
+ssave it in flye
 
 ```{bash}
 #!/bin/bash
@@ -57,4 +57,10 @@ And submit the job:
 
 ```{bash}
 sbatch run_flye_bbd.sh
+```
+
+follow the queue
+
+```{r}
+squeue
 ```
