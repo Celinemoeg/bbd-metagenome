@@ -83,3 +83,9 @@ Submit the job:
 ```{bash}
 sbatch run_prokka.sh
 ```
+
+- my jobs are
+
+495 bigmem run_gtdb jd140184
+
+498 work run_prok jd140184
