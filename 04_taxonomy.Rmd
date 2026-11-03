@@ -81,4 +81,16 @@ Submit the job:
 sbatch run_gtdbtk.sh
 ```
 
-- this takes long so i will continue on step 7
+It is done so now i can check that it produced a summary classification
+
+```{bash}
+ls -l out/gtdbtk.bac120.summary.tsv
+```
+
+it did get created
+
+copy the summary up into the `gtdbtk` folder. Git ignores everything inside `out`, but it can see a `.tsv` file saved directly in `gtdbtk`, so this lets you add the summary to your repository.
+
+```{bash}
+cp out/gtdbtk.bac120.summary.tsv .
+```
