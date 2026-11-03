@@ -17,9 +17,69 @@ knitr::opts_hooks$set(engine = function(options) {
 })
 ```
 
+```{=html}
 <!--
 Explain what this step does and why, and copy each command you ran into a
 bash chunk. R chunks run from the top of the repository.
 -->
+```
 
 Gene prediction and annotation of the most complete bins with Prokka. Commands for this step were run in `prokka/`.
+
+# Step 7. Find and annotate genes with prokka
+
+The ultimate goal is to use the BBD metagenome to improve our understanding of metabolic processes within the mat.
+
+hange to the folder for our prokka work.
+
+```{bash}
+cd ~/bbd-metagenome/prokka
+```
+
+pick a bin to test with. Look at the list of bins you made in step 5
+
+```{bash}
+cat ../checkm/bbd_topbins.txt
+```
+
+- I chose to test the metabat.66 bin.
+
+```{bash}
+bin=metabat.66
+prokka --cpus 2 --outdir $bin --prefix $bin  ../metabat/bins_bbd/${bin}.fa
+```
+
+list the files in metabat.66:
+
+```{bash}
+ls metabat.66
+```
+
+- it worked and i have the tsv file
+
+Now we are ready to run prokka on all the metagenomes. This is another computationally intensive step, so it’s time for another slurm script.
+
+Create a new blank text file and save it in your `prokka` directory. Call it `run_prokka.sh` and copy the following code into it.
+
+```{bash}
+#!/bin/bash
+#SBATCH --time=90
+#SBATCH --ntasks=2 --mem=2gb
+
+echo "Starting prokka in $(pwd) at $(date)"
+
+shopt -s expand_aliases
+alias prokka='apptainer run -B /pvol/:/pvol /pvol/data/sif/prokka.sif prokka'
+
+while read bin;do 
+  prokka --cpus 2 --outdir $bin --prefix $bin "../metabat/bins_bbd/${bin}.fa";
+done < ../checkm/bbd_topbins.txt
+
+echo "Finished prokka in $(pwd) at $(date)"
+```
+
+Submit the job:
+
+```{bash}
+sbatch run_prokka.sh
+```
