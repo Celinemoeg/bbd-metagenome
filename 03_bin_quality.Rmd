@@ -17,9 +17,25 @@ knitr::opts_hooks$set(engine = function(options) {
 })
 ```
 
+```{=html}
 <!--
 Explain what this step does and why, and copy each command you ran into a
 bash chunk. R chunks run from the top of the repository.
 -->
+```
 
 Completeness and contamination of each bin, estimated with CheckM, and selection of the most complete bins for further analysis. Commands for this step were run in `checkm/`.
+
+`cd` to the folder for this step, `checkm`.
+
+```{bash}
+cd ~/bbd-metagenome/checkm
+```
+
+Display the lengths of all contigs sorted from shortest to longest.
+
+```{bash}
+cat ../flye/bbd/assembly.fasta | bioawk -c fastx '{print length($seq),$name}' | sort -n
+```
+
+- contig_126 my longest contig
