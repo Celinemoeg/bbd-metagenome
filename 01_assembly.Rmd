@@ -62,3 +62,19 @@ follow the queue
 ```{bash}
 squeue
 ```
+
+- finished after aboout 45min
+
+**Check that flye worked**
+
+```{bash}
+sacct -j 470 --format=JobID,State,MaxRSS,Elapsed # The state coloumn says completed, so all good!
+```
+
+- The state coloumn should completed.
+
+- if it says OUT_OF_MEMORY or TIMEOUT, ask for help
+
+```{bash}
+ls -l bbd/assembly.fasta
+```
