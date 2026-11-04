@@ -20,7 +20,7 @@ metabat_66 <- read_tsv("prokka/metabat.66/metabat.66.tsv")
 metabat_66
 ```
 
-```{r}
+```{r first try at tidy}
 gtdbtk |>
   separate_longer_delim(classification, delim = ";") |> 
   group_by(user_genome) |>
@@ -30,7 +30,7 @@ gtdbtk |>
 
 ```{r tidy table}
 gtdbk_taxonomy <- gtdbtk |> 
-separate_longer_delim(classification, delim = ";") |> 
+separate_longer_delim(classification, delim = ";") |> # split the 
   mutate(rank= str_extract(classification, "^[dpcofgs](?=__)")) |> 
   pivot_wider(
     names_from = rank, 
