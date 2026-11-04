@@ -24,68 +24,42 @@ bash chunk. R chunks run from the top of the repository.
 -->
 ```
 
-notes:
-
-- in here take notes sutch as:
-
-- a fly was run with the fly script "file name" (can actually make a directly link to that file)
-
-- it ran for xx minutes and final assmebly was then assesed to identify the longest contigs.
-
-- remeber to submit the changes and comit an push it up
-
-- add the three sections of the learnjcu to the top of the index files
-
 Assembly of the BBD nanopore reads with Flye. Commands for this step were run in `flye/`.
 
-Change directory into `flye` and then make a symbolic link to the bbd read data
+## **Step 2: Assembly**
+
+Moved into the `flye` folder and made a symbolic link to the BBD read data, so the large file sn't copied.
 
 ```{bash}
 cd ~/bbd-metagenome/flye # Change directonary
 ln -s /pvol/data/metagenome_assembly/bbd_0.1.fastq.gz . #symbolick link 
 ```
 
-create a new shell script:
+Made a new shell script called [run_flye_bbd.sh](flye/run_flye_bbd.sh) and saved it in the `flye` folder.
 
-name: run_flye_bbd.shg
-
-ssave it in flye
-
-```{bash}
-#!/bin/bash
-#SBATCH --time=720
-#SBATCH --ntasks=12 --mem=20gb
-
-echo "Starting flye bbd in $(pwd) at $(date)"
-
-flye --nano-hq bbd_0.1.fastq.gz --threads 12 --out-dir bbd --meta
-
-echo "Finished flye bbd in $(pwd) at $(date)"
-```
-
-And submit the job:
+Submitted the job and followed it's progress in the queue.
 
 ```{bash}
 sbatch run_flye_bbd.sh
 ```
 
-follow the queue
+Following in the queue
 
 ```{bash}
 squeue
 ```
 
-- finished after aboout 45min
+The job ran for about 45 min.
 
-**Check that flye worked**
+Checked that flye worked with `sacct` (job 470) instead of the slurm log prints "Finished" even if flye fails.
 
 ```{bash}
 sacct -j 470 --format=JobID,State,MaxRSS,Elapsed # The state coloumn says completed, so all good!
 ```
 
-- The state coloumn should completed.
+The state column said COMPLETED, so the run worked.
 
-- if it says OUT_OF_MEMORY or TIMEOUT, ask for help
+Final assembly was then assessed
 
 ```{bash}
 ls -l bbd/assembly.fasta
