@@ -55,7 +55,7 @@ ls genomes
 
 Made a shell script, [run_gtdbtk.sh](gtdbtk/run_gtdbtk.sh), and saved it in `gtdbtk`
 
-Submitted the job. It ran for about 60 minutes (just a guess as i submitted it and left it over night to run)
+Submitted the job (job 495). It ran for about 60 minutes (just a guess as i submitted it and left it over night to run)
 
 ```{bash}
 sbatch run_gtdbtk.sh

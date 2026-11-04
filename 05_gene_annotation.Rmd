@@ -17,77 +17,45 @@ knitr::opts_hooks$set(engine = function(options) {
 })
 ```
 
-```{=html}
-<!--
-Explain what this step does and why, and copy each command you ran into a
-bash chunk. R chunks run from the top of the repository.
--->
-```
-
 Gene prediction and annotation of the most complete bins with Prokka. Commands for this step were run in `prokka/`.
 
 # Step 7. Find and annotate genes with prokka
 
-The ultimate goal is to use the BBD metagenome to improve our understanding of metabolic processes within the mat.
+The ultimate goal is to use the BBD metagenome to improve our understanding of metabolic processes within the mat. To do this we first need to find the genes in each bin and, where possible, assign them a name and function based on homologous genes of known function.
 
-hange to the folder for our prokka work.
+Moved into the `prokka` folder
 
 ```{bash}
 cd ~/bbd-metagenome/prokka
 ```
 
-pick a bin to test with. Look at the list of bins you made in step 5
+Looked at the list of top bins from step 5 to pick one to test with
 
 ```{bash}
 cat ../checkm/bbd_topbins.txt
 ```
 
-- I chose to test the metabat.66 bin.
+Tested Prokka on a single bin first, `metabat.66`
 
 ```{bash}
 bin=metabat.66
 prokka --cpus 2 --outdir $bin --prefix $bin  ../metabat/bins_bbd/${bin}.fa
 ```
 
-list the files in metabat.66:
+Listed the output folder. It worked, and the `.tsv` file with each gene's name and functional information was there
 
 ```{bash}
 ls metabat.66
 ```
 
-- it worked and i have the tsv file
+Then ran Prokka on all the top bins. This is computationally intensive, so I used a slurm script, [run_prokka.sh](prokka/run_prokka.sh), saved in `prokka`
 
-Now we are ready to run prokka on all the metagenomes. This is another computationally intensive step, so it’s time for another slurm script.
+The script loops over the bins in `bbd_topbins.txt` and annotates each one
 
-Create a new blank text file and save it in your `prokka` directory. Call it `run_prokka.sh` and copy the following code into it.
 
-```{bash}
-#!/bin/bash
-#SBATCH --time=90
-#SBATCH --ntasks=2 --mem=2gb
-
-echo "Starting prokka in $(pwd) at $(date)"
-
-shopt -s expand_aliases
-alias prokka='apptainer run -B /pvol/:/pvol /pvol/data/sif/prokka.sif prokka'
-
-while read bin;do 
-  prokka --cpus 2 --outdir $bin --prefix $bin "../metabat/bins_bbd/${bin}.fa";
-done < ../checkm/bbd_topbins.txt
-
-echo "Finished prokka in $(pwd) at $(date)"
-```
-
-Submit the job:
+Submitted the job (job 498). It ran overnight
+The gtdbtk job (job 495) was running at the time and was also done the next day.
 
 ```{bash}
 sbatch run_prokka.sh
 ```
-
-- my jobs are
-
-495 bigmem run_gtdb jd140184
-
-498 work run_prok jd140184
-
-both are done so i can continue
