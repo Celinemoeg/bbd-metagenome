@@ -11,6 +11,7 @@ output:
 
 ```{r Library}
 library(tidyverse)
+library(Biostrings)
 ```
 
 ```{r import data}
@@ -18,7 +19,12 @@ gtdbtk <- read_tsv("gtdbtk/gtdbtk.bac120.summary.tsv")
 gtdbtk
 metabat_66 <- read_tsv("prokka/metabat.66/metabat.66.tsv")
 metabat_66
+
+flye_assembly <- readDNAStringSet("flye/bbd/assembly.fasta")
+flye_assembly
 ```
+
+### Tidying the gtdbtk df
 
 ```{r first try at tidy}
 gtdbtk |>
@@ -29,13 +35,13 @@ gtdbtk |>
 ```
 
 ```{r tidy table}
-gtdbk_taxonomy <- gtdbtk |> 
-separate_longer_delim(classification, delim = ";") |> # split the 
-  mutate(rank= str_extract(classification, "^[dpcofgs](?=__)")) |> 
+gtdbtk_taxonomy <- gtdbtk |> 
+separate_longer_delim(classification, delim = ";") |> # split the classification string into long format
+  mutate(rank= str_extract(classification, "^[dpcofgs](?=__)")) |> # extract just the single rank letter
   pivot_wider(
     names_from = rank, 
     values_from = classification
-  ) |> 
+  ) |> # pivot wider using the letters as temporary collumn names 
    rename(
     domain  = d,
     phylum  = p,
@@ -44,13 +50,21 @@ separate_longer_delim(classification, delim = ";") |> # split the
     family  = f,
     genus   = g,
     species = s
-  ) |> 
+  ) |> # rename the letter columns o theire taxonomic names 
   mutate(across(
     c(domain, phylum, class, order, family, genus, species),
     ~ str_remove(.x, "^[a-z]__")
-  )) |> 
-  select(user_genome, domain, phylum, class, order, family, genus, species)
+  )) |> # Take away the start letter and undercore (f_)
+  select(user_genome, domain, phylum, class, order, family, genus, species) # selects only the collumns i want in this df
 
-gtdbk_taxonomy
+gtdbtk_taxonomy
 ```
+
+### Figures 
+
+```{r}
+
+
+```
+
 
