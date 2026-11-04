@@ -34,6 +34,8 @@ notes:
 
 - remeber to submit the changes and comit an push it up
 
+- add the three sections of the learnjcu to the top of the index files
+
 Assembly of the BBD nanopore reads with Flye. Commands for this step were run in `flye/`.
 
 Change directory into `flye` and then make a symbolic link to the bbd read data
