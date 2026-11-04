@@ -22,6 +22,9 @@ metabat_66
 
 flye_assembly <- readDNAStringSet("flye/bbd/assembly.fasta")
 flye_assembly
+
+checkm_lines <- readLines("checkm/checkm_results_bbd.txt")
+checkm_lines
 ```
 
 ### Tidying the gtdbtk df
@@ -34,37 +37,160 @@ gtdbtk |>
   summarise(short_classification=paste(classification, collapse = " "))
 ```
 
-```{r tidy table}
-gtdbtk_taxonomy <- gtdbtk |> 
-separate_longer_delim(classification, delim = ";") |> # split the classification string into long format
-  mutate(rank= str_extract(classification, "^[dpcofgs](?=__)")) |> # extract just the single rank letter
-  pivot_wider(
-    names_from = rank, 
-    values_from = classification
-  ) |> # pivot wider using the letters as temporary collumn names 
-   rename(
-    domain  = d,
-    phylum  = p,
-    class   = c,
-    order   = o,
-    family  = f,
-    genus   = g,
-    species = s
-  ) |> # rename the letter columns o theire taxonomic names 
-  mutate(across(
-    c(domain, phylum, class, order, family, genus, species),
-    ~ str_remove(.x, "^[a-z]__")
-  )) |> # Take away the start letter and undercore (f_)
-  select(user_genome, domain, phylum, class, order, family, genus, species) # selects only the collumns i want in this df
 
-gtdbtk_taxonomy
+```{r}
+# shorter code for the same 
+gtdbtk_taxonomy2 <- gtdbtk |>
+  separate_wider_delim(
+    classification, delim = ";",
+    names = c("domain", "phylum", "class", "order", "family", "genus", "species")
+  ) |>
+  mutate(across(domain:species, ~ na_if(str_remove(.x, "^[a-z]__"), ""))) |>
+  select(user_genome, domain:species)
+
+gtdbtk_taxonomy2
 ```
+
+
+### CheckM results (lines 104–125) 
+```{r}
+# Keep actual bin-result lines only
+checkm_lines <- checkm_lines[
+  grepl("^(contig_|metabat\\.)", trimws(checkm_lines))
+]
+
+# Split whitespace-delimited CheckM output
+checkm_split <- strsplit(trimws(checkm_lines), "\\s+")
+
+checkm_df <- do.call(rbind, lapply(checkm_split, function(x) {
+  data.frame(
+    bin = x[1],
+    lineage = x[2],
+    completeness = as.numeric(x[13]),
+    contamination = as.numeric(x[14])
+  )
+}))
+
+checkm_df
+```
+
+
+### Join
+
+```{r}
+bin_table <- checkm_df |>
+  left_join(gtdbtk_taxonomy2, by = c("bin" = "user_genome")) |>
+  mutate(label = coalesce(species, genus, family, order, class, phylum, domain))
+bin_table
+```
+
+
+
 
 ### Figures 
 
+**GTDB-Tk taxonomy table**
 ```{r}
+checkm_top <- bin_table |>
+  filter(completeness > 15) |>
+  mutate(y_label = paste0(label, " (", bin, ")")) |>
+  arrange(completeness)
 
-
+ggplot(
+  checkm_top,
+  aes(
+    x = completeness,
+    y = reorder(y_label, completeness)
+  )
+) +
+  geom_col(fill = "black", width = 0.7) +
+  geom_text(
+    aes(label = paste0(round(completeness, 1), "%")),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+  scale_x_continuous(
+  limits = c(0, 120),
+  breaks = seq(0, 100, 20),
+  expand = expansion(mult = c(0, 0))
+) +
+  labs(
+    x = "Genome completeness (%)",
+    y = NULL
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic(base_size = 12) +
+  theme(
+    axis.text = element_text(colour = "black"),
+    axis.title = element_text(colour = "black"),
+    plot.margin = margin(5.5, 30, 5.5, 5.5)
+  )
 ```
 
+### Assembly quality
+
+```{r}
+n50 <- function(x) { x <- sort(x, decreasing = TRUE); x[cumsum(x) >= sum(x) / 2][1] }
+len <- width(flye_assembly)
+
+assembly_stats <- tibble(
+  contigs   = length(len),
+  total_Mb  = sum(len) / 1e6,
+  longest_Mb = max(len) / 1e6,
+  N50_kb    = n50(len) / 1e3
+)
+assembly_stats
+```
+- assembly is fragmented overall but with at least one very contiguous genome
+
+Bin quality from CheckM, using the MIMAG thresholds:
+
+```{r}
+bin_table |>
+  summarise(
+    bins_total   = n(),
+    over_15      = sum(completeness > 15),
+    medium_qual  = sum(completeness >= 50 & contamination < 10),
+    high_qual    = sum(completeness > 90 & contamination < 5)
+  )
+```
+### Prokka genes and EC numbers
+```{r}
+bins <- readLines("checkm/bbd_topbins.txt")
+
+prokka_all <- map_dfr(bins, \(b)
+  read_tsv(file.path("prokka", b, paste0(b, ".tsv")), show_col_types = FALSE) |>
+    mutate(bin = b))
+
+prokka_all |> summarise(features = n(),
+                        CDS = sum(ftype == "CDS"),
+                        with_EC = sum(!is.na(EC_number)))
+
+prokka_all |> group_by(bin) |>
+  summarise(CDS = sum(ftype == "CDS"), with_EC = sum(!is.na(EC_number)))
+```
+
+Minpath (Q4.1 and Q4.2)
+```{r}
+rx <- "^path\\s+(\\S+)\\s+.*naive\\s+(\\d+)\\s+minpath\\s+(\\d+)\\s+fam0\\s+(\\d+)\\s+fam-found\\s+(\\d+)\\s+name\\s+(.*)$"
+
+minpath_all <- map_dfr(
+  list.files("minpath", pattern = "\\.ec\\.report$", full.names = TRUE),
+  \(f) {
+    m <- str_match(read_lines(f), rx)
+    m <- m[!is.na(m[, 1]), , drop = FALSE]
+    tibble(bin = str_remove(basename(f), "\\.ec\\.report$"),
+           pathway = m[, 2], naive = as.integer(m[, 3]),
+           minpath = as.integer(m[, 4]), fam0 = as.integer(m[, 5]),
+           fam_found = as.integer(m[, 6]), name = m[, 7])
+  })
+
+key_paths <- minpath_all |>
+  filter(pathway %in% c("PWY-101", "PWY-5360")) |>
+  left_join(gtdbtk_taxonomy, by = c("bin" = "user_genome")) |>
+  mutate(complete = fam_found == fam0) |>
+  select(pathway, bin, fam0, fam_found, complete, minpath, phylum, class, order, family, genus)
+
+key_paths |> arrange(pathway, desc(fam_found))
+```
 
