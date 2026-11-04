@@ -25,3 +25,179 @@ bash chunk. R chunks run from the top of the repository.
 ```
 
 Metabolic pathways inferred from the Prokka annotations with MinPath. Commands for this step were run in `minpath/`.
+
+Change into the `minpath` folder:
+
+```{bash}
+cd ~/bbd-metagenome/minpath
+```
+
+Inputs for minpath will be prepared for each bin based on the prokka `.tsv` file. Start by looking at the `.tsv` file for a single bin
+
+```{bash}
+head ../prokka/metabat.66/metabat.66.tsv
+```
+
+Just wanna try another one
+
+```{bash}
+head ../prokka/metabat.7/metabat.7.tsv
+```
+
+It works
+
+For input to minpath we only want to keep a unique ID for each gene (column 1) and its EC number (column 5). We can transform the tsv into this format using awk like this
+
+```{bash}
+head ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '{print $1,$5}'
+```
+
+here we are using `-F '\t'` to tell awk that our input is tab separated. We also want to filter the output to only include lines with an EC number
+
+```{bash}
+head ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{print $1,$5}'
+```
+
+ need to ensure that the output is tab separated and we also need to remove the header line
+
+```{bash}
+head ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{OFS="\t";print $1,$5}' | grep -v '^locus'
+```
+
+This of course only processes the first 10 lines … we need to change `head` to `cat` to include all genes
+
+```{bash}
+cat ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{OFS="\t";print $1,$5}' | grep -v '^locus'
+```
+
+create the .ec file
+
+```{bash}
+cat ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{OFS="\t";print $1,$5}' | grep -v '^locus' > metabat.66.ec
+```
+
+run minpath on this file
+
+```{bash}
+minpath -ec metabat.66.ec -report metabat.66.ec.report -details metabat.66.ec.details
+```
+
+look at the top few lines
+
+```{bash}
+head metabat.66.ec.report 
+```
+
+note: explanation of the line
+
+Important parts of this line are
+
+- **PWY-7321** which is a pathway identifier in the metacyc database. You can use this to lookup the full pathway. Eg [PWY-7321](https://biocyc.org/META/NEW-IMAGE?type=PATHWAY&object=PWY-7321)
+
+- **naive 1** tells us that at least one gene from this pathway was found. Simply calling a pathway present whenever one of its genes is found is the “naive” approach
+
+- **minpath 1** tells us that minpath kept this pathway in its minimal set of pathways. If this says `minpath 0` then minpath decided that the genes found are better explained by other pathways, so the evidence for this one is weak
+
+- **fam0 4** tells us that four gene families are involved in this pathway
+
+- **fam-found 2** tells us that we found 2 gene families from the pathway in this genome
+
+- **name ecdysteroid metabolism (arthropods)** is a name for the pathway
+
+**Prokka**
+
+since prokka is done i can now prepare a minipath for all bins
+
+```{bash}
+while read bin;do 
+  cat ../prokka/$bin/${bin}.tsv | awk -F '\t' '$5{printf("%s\t%s\n", $1,$5)}' | grep -v '^locus' > ${bin}.ec 
+done < ../checkm/bbd_topbins.txt
+```
+
+run minpath on every bin.
+
+```{bash}
+while read bin;do 
+  minpath -ec ${bin}.ec -report ${bin}.ec.report -details ${bin}.ec.details
+done < ../checkm/bbd_topbins.txt
+```
+
+- didnt take to long
+
+i will only look at two of the pathways.
+
+```{bash}
+grep 'PWY-101' *.ec.report
+```
+
+This pathway includes the essential components of photosynthesis that occur in light, Photosystem I and Photosystem II.
+
+- i got 4 lines and all are photosynthesis light reactions
+
+**Question 4.1**
+
+- How many bins contain at least one gene from this pathway?
+
+there are 4 bins that contain atlest one pathway from this pathway.
+
+- Which bin has all of the genes (ie a complete pathway)?
+
+there is one bin the metabat.66 with fam-found 4, and the fam0 is 4, which means metabat.66 is the onlyone with all of the genes.
+
+- For which bins does minpath keep the pathway (`minpath 1`)?
+
+minpath 1 is only kept on two of the bins the metabat.66 and metabat.7
+
+i will now crossrefrence all the 4 bins with gtdbtk to see if the bins contain tis pathway:
+
+my bins are
+
+contig_126.ec
+
+metabat.66.ec
+
+metabat.7.ec
+
+metabat.9.ec
+
+```{bash}
+grep 'contig_126' ../gtdbtk/gtdbtk.bac120.summary.tsv
+```
+
+```{bash}
+grep 'metabat.66' ../gtdbtk/gtdbtk.bac120.summary.tsv
+```
+
+```{bash}
+grep 'metabat.7' ../gtdbtk/gtdbtk.bac120.summary.tsv
+```
+
+```{bash}
+grep 'metabat.9' ../gtdbtk/gtdbtk.bac120.summary.tsv
+```
+
+the second pathway is calles superpathway of tetrathionate reduction.
+
+This pathway is important because it includes enzymes required to reduce sulfite to hydrogen sulfide.
+
+```{bash}
+grep 'PWY-5360' *.ec.report
+```
+
+```{bash}
+grep 'metabat.30' ../gtdbtk/gtdbtk.bac120.summary.tsv
+```
+
+**Question 4.2**
+
+- How many bins contain the pathway PWY-5360?
+
+there is only one bin that has this pathway.
+
+- What order (in a taxonomic sense) do these bins belong to? Are they in the same family?
+
+this bin belonge to the order campylobacteriales, there is only one bin.
+
+- How strong is the evidence that these bins really have this pathway? Look at the `fam-found` and `minpath` columns.
+
+the minpath is 0 and the fam-found is 1 out of 3 fams. the evidence for this bin actually having this pathway is weak.
