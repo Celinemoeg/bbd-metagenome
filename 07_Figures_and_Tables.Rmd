@@ -8,3 +8,49 @@ output:
 ---
 
 
+
+```{r Library}
+library(tidyverse)
+```
+
+```{r import data}
+gtdbtk <- read_tsv("gtdbtk/gtdbtk.bac120.summary.tsv")
+gtdbtk
+metabat_66 <- read_tsv("prokka/metabat.66/metabat.66.tsv")
+metabat_66
+```
+
+```{r}
+gtdbtk |>
+  separate_longer_delim(classification, delim = ";") |> 
+  group_by(user_genome) |>
+  slice_tail(n=3) |> 
+  summarise(short_classification=paste(classification, collapse = " "))
+```
+
+```{r tidy table}
+gtdbk_taxonomy <- gtdbtk |> 
+separate_longer_delim(classification, delim = ";") |> 
+  mutate(rank= str_extract(classification, "^[dpcofgs](?=__)")) |> 
+  pivot_wider(
+    names_from = rank, 
+    values_from = classification
+  ) |> 
+   rename(
+    domain  = d,
+    phylum  = p,
+    class   = c,
+    order   = o,
+    family  = f,
+    genus   = g,
+    species = s
+  ) |> 
+  mutate(across(
+    c(domain, phylum, class, order, family, genus, species),
+    ~ str_remove(.x, "^[a-z]__")
+  )) |> 
+  select(user_genome, domain, phylum, class, order, family, genus, species)
+
+gtdbk_taxonomy
+```
+
