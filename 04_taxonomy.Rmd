@@ -17,79 +17,57 @@ knitr::opts_hooks$set(engine = function(options) {
 })
 ```
 
-```{=html}
-<!--
-Explain what this step does and why, and copy each command you ran into a
-bash chunk. R chunks run from the top of the repository.
--->
-```
-
 Taxonomic classification of the most complete bins with GTDB-Tk. Commands for this step were run in `gtdbtk/`.
 
 ## **Step 6: Perform taxonomic classification with gtdbtk**
 
- change directory to the `gtdbtk` folder.
+Move into the `gtdbtk` folder
 
 ```{bash}
 cd ~/bbd-metagenome/gtdbtk
 ```
 
-First just get the while loop working
+The `genomes` subfolder holds a copyof each top bin (completeness above 15%) from step 5, which is the input for the gtdbtk.
+
+Build the copy comand up in steps. First i checked that the loop could read the bin names from `bbd_topbins.txt`
 
 ```{bash}
 while read bin;do echo $bin;done < ../checkm/bbd_topbins.txt
 ```
 
-We need to turn this bin name into a path specifying the fasta file for the bin. So for every bin we need to prepend the path to its folder `../metabat/bins_bbd/` and then append the file extension `.fa`
+Turned each bin name into the path of its fasta file by adding the folder `../metabat/bins_bbd/` at the start and `.fa` at the end
 
 ```{bash}
 while read bin;do echo "../metabat/bins_bbd/${bin}.fa";done < ../checkm/bbd_topbins.txt
 ```
 
-Now we are ready to perform the copy
+Then copied each bin into `genomes`, and listed the folder to check there was one file per bin
 
 ```{bash}
 while read bin;do cp "../metabat/bins_bbd/${bin}.fa" genomes;done < ../checkm/bbd_topbins.txt
 ```
 
-Check that it worked by listing files within the `genomes` directory. You should see one file for each of the bins
+Check that it worked by listing files within the `genomes` directory. There should be one file for each of the bins
 
 ```{bash}
 ls genomes
 ```
 
-create a blank shell script file and save it inside your `gtdbtk` directory. Name your file `run_gtdbtk.sh`
+Made a shell script, [run_gtdbtk.sh](gtdbtk/run_gtdbtk.sh), and saved it in `gtdbtk`
 
-```{bash}
-#!/bin/bash
-#SBATCH --time=120
-#SBATCH --ntasks=2 --mem=56gb
-
-echo "Starting gtdbtk in $(pwd) at $(date)"
-
-shopt -s expand_aliases
-alias gtdbtk='apptainer run -B /pvol:/pvol,/pvol/data/mg/gtdbtkdata/release207_v2/:/refdata /pvol/data/sif/gtdbtk.sif'
-
-gtdbtk classify_wf -x fa --cpus 2 --genome_dir genomes --out_dir out --skip_ani_screen
-
-echo "Finished gtdbtk in $(pwd) at $(date)"
-```
-
-Submit the job:
+Submitted the job. It ran for about 60 minutes (just a guess as i submitted it and left it over night to run)
 
 ```{bash}
 sbatch run_gtdbtk.sh
 ```
 
-It is done so now i can check that it produced a summary classification
+When it finished, I checked that it had produced the summary of classifications. The file was created, so the job worked
 
 ```{bash}
 ls -l out/gtdbtk.bac120.summary.tsv
 ```
 
-it did get created
-
-copy the summary up into the `gtdbtk` folder. Git ignores everything inside `out`, but it can see a `.tsv` file saved directly in `gtdbtk`, so this lets you add the summary to your repository.
+Copied the summary up into the `gtdbtk` folder. Git ignores everything inside `out`, but it can see a `.tsv` saved directly in `gtdbtk`, so this lets me add the summary to the repository
 
 ```{bash}
 cp out/gtdbtk.bac120.summary.tsv .
