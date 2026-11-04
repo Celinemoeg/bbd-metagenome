@@ -17,22 +17,19 @@ knitr::opts_hooks$set(engine = function(options) {
 })
 ```
 
-```{=html}
-<!--
-Explain what this step does and why, and copy each command you ran into a
-bash chunk. R chunks run from the top of the repository.
--->
-```
-
 Metabolic pathways inferred from the Prokka annotations with MinPath. Commands for this step were run in `minpath/`.
 
-Change into the `minpath` folder:
+# Step 8: Infer metabolic pathways
+
+## Preparing the input for one bin
+
+Moved into the `minpath` folder
 
 ```{bash}
 cd ~/bbd-metagenome/minpath
 ```
 
-Inputs for minpath will be prepared for each bin based on the prokka `.tsv` file. Start by looking at the `.tsv` file for a single bin
+MinPath input is prepared from each bin's Prokka `.tsv` file, so I looked at the file for a single bin first (`metabat.66`), then checked a second bin (`metabat.7`) to make sure the format was the same
 
 ```{bash}
 head ../prokka/metabat.66/metabat.66.tsv
@@ -44,33 +41,33 @@ Just wanna try another one
 head ../prokka/metabat.7/metabat.7.tsv
 ```
 
-It works
+And it works
 
-For input to minpath we only want to keep a unique ID for each gene (column 1) and its EC number (column 5). We can transform the tsv into this format using awk like this
+MinPath only needs a unique gene ID (column 1) and its EC number (column 5). Built the `awk` command up in steps, using `head` to test on the first lines:
+  - `-F '\t'` tells awk the input is tab separated
+  - `$5` keeps only the lines that have an EC number
+  - `OFS="\t"` makes the output tab separated
+  - `grep -v '^locus'` removes the header line
 
 ```{bash}
 head ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '{print $1,$5}'
 ```
 
-here we are using `-F '\t'` to tell awk that our input is tab separated. We also want to filter the output to only include lines with an EC number
-
 ```{bash}
 head ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{print $1,$5}'
 ```
-
- need to ensure that the output is tab separated and we also need to remove the header line
 
 ```{bash}
 head ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{OFS="\t";print $1,$5}' | grep -v '^locus'
 ```
 
-This of course only processes the first 10 lines … we need to change `head` to `cat` to include all genes
+Swapped `head` for `cat` so all genes are included, and saved the output as `metabat.66.ec`
 
 ```{bash}
 cat ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{OFS="\t";print $1,$5}' | grep -v '^locus'
 ```
 
-create the .ec file
+Create the .ec file
 
 ```{bash}
 cat ../prokka/metabat.66/metabat.66.tsv | awk -F '\t' '$5{OFS="\t";print $1,$5}' | grep -v '^locus' > metabat.66.ec
@@ -82,31 +79,23 @@ run minpath on this file
 minpath -ec metabat.66.ec -report metabat.66.ec.report -details metabat.66.ec.details
 ```
 
-look at the top few lines
+Ran MinPath on this file and looked at the top of the report
 
 ```{bash}
 head metabat.66.ec.report 
 ```
 
-note: explanation of the line
+## How to read a line of the MinPath report
 
-Important parts of this line are
+- **PWY-7321**: the pathway ID in the MetaCyc database, which can be used to look up the full pathway ([PWY-7321](https://biocyc.org/META/NEW-IMAGE?type=PATHWAY&object=PWY-7321))
+- **naive 1**: at least one gene from the pathway was found. Calling a pathway present whenever one gene is found is the "naive" approach
+- **minpath 1**: MinPath kept the pathway in its minimal set. `minpath 0` means the genes found are better explained by other pathways, so the evidence is weak
+- **fam0 4**: four gene families are involved in the pathway
+- **fam-found 2**: two of those gene families were found in this genome
+- **name**: the pathway name (here, ecdysteroid metabolism in arthropods)
 
-- **PWY-7321** which is a pathway identifier in the metacyc database. You can use this to lookup the full pathway. Eg [PWY-7321](https://biocyc.org/META/NEW-IMAGE?type=PATHWAY&object=PWY-7321)
-
-- **naive 1** tells us that at least one gene from this pathway was found. Simply calling a pathway present whenever one of its genes is found is the “naive” approach
-
-- **minpath 1** tells us that minpath kept this pathway in its minimal set of pathways. If this says `minpath 0` then minpath decided that the genes found are better explained by other pathways, so the evidence for this one is weak
-
-- **fam0 4** tells us that four gene families are involved in this pathway
-
-- **fam-found 2** tells us that we found 2 gene families from the pathway in this genome
-
-- **name ecdysteroid metabolism (arthropods)** is a name for the pathway
-
-**Prokka**
-
-since prokka is done i can now prepare a minipath for all bins
+## Running MinPath on all bins
+Prokka had finished, so I prepared the `.ec` input for every top bin and then ran MinPath on each one. This didn't take long
 
 ```{bash}
 while read bin;do 
@@ -114,17 +103,17 @@ while read bin;do
 done < ../checkm/bbd_topbins.txt
 ```
 
-run minpath on every bin.
-
 ```{bash}
 while read bin;do 
   minpath -ec ${bin}.ec -report ${bin}.ec.report -details ${bin}.ec.details
 done < ../checkm/bbd_topbins.txt
 ```
 
-- didnt take to long
+There is far too much output to read it all, so I looked at two pathways only
 
-i will only look at two of the pathways.
+## Pathway 1: photosynthesis light reactions (PWY-101)
+
+This pathway includes the essential light-driven parts of photosynthesis, Photosystem I and Photosystem II
 
 ```{bash}
 grep 'PWY-101' *.ec.report
@@ -132,72 +121,34 @@ grep 'PWY-101' *.ec.report
 
 This pathway includes the essential components of photosynthesis that occur in light, Photosystem I and Photosystem II.
 
-- i got 4 lines and all are photosynthesis light reactions
+- I got 4 lines, all for photosynthesis light reactions
 
 **Question 4.1**
 
-- How many bins contain at least one gene from this pathway?
+- **How many bins contain at least one gene from this pathway?** Four bins: `contig_126`, `metabat.66`, `metabat.7` and `metabat.9`
+- **Which bin has all of the genes?** Only `metabat.66`, which has fam-found 4 out of fam0 4, so it has every gene family in the pathway
+- **For which bins does MinPath keep the pathway (`minpath 1`)?** Two bins, `metabat.66` and `metabat.7`
 
-there are 4 bins that contain atlest one pathway from this pathway.
-
-- Which bin has all of the genes (ie a complete pathway)?
-
-there is one bin the metabat.66 with fam-found 4, and the fam0 is 4, which means metabat.66 is the onlyone with all of the genes.
-
-- For which bins does minpath keep the pathway (`minpath 1`)?
-
-minpath 1 is only kept on two of the bins the metabat.66 and metabat.7
-
-i will now crossrefrence all the 4 bins with gtdbtk to see if the bins contain tis pathway:
-
-my bins are
-
-contig_126.ec
-
-metabat.66.ec
-
-metabat.7.ec
-
-metabat.9.ec
+Cross-referenced the four bins with the gtdbtk summary to see their taxonomy
 
 ```{bash}
 grep 'contig_126' ../gtdbtk/gtdbtk.bac120.summary.tsv
-```
-
-```{bash}
 grep 'metabat.66' ../gtdbtk/gtdbtk.bac120.summary.tsv
-```
-
-```{bash}
 grep 'metabat.7' ../gtdbtk/gtdbtk.bac120.summary.tsv
-```
-
-```{bash}
 grep 'metabat.9' ../gtdbtk/gtdbtk.bac120.summary.tsv
 ```
 
-the second pathway is calles superpathway of tetrathionate reduction.
+## Pathway 2: superpathway of tetrathionate reduction (PWY-5360)
 
-This pathway is important because it includes enzymes required to reduce sulfite to hydrogen sulfide.
+This pathway includes enzymes needed to reduce sulfite to hydrogen sulfide, so it is a marker for sulfate reduction
 
 ```{bash}
 grep 'PWY-5360' *.ec.report
-```
-
-```{bash}
 grep 'metabat.30' ../gtdbtk/gtdbtk.bac120.summary.tsv
 ```
 
 **Question 4.2**
 
-- How many bins contain the pathway PWY-5360?
-
-there is only one bin that has this pathway.
-
-- What order (in a taxonomic sense) do these bins belong to? Are they in the same family?
-
-this bin belonge to the order campylobacteriales, there is only one bin.
-
-- How strong is the evidence that these bins really have this pathway? Look at the `fam-found` and `minpath` columns.
-
-the minpath is 0 and the fam-found is 1 out of 3 fams. the evidence for this bin actually having this pathway is weak.
+- **How many bins contain PWY-5360?** Only one, `metabat.30`
+- **What order do these bins belong to? Are they in the same family?** The bin belongs to the order Campylobacterales. There is only one bin, so there is no comparison of families
+- **How strong is the evidence?** Weak. MinPath did not keep the pathway (`minpath 0`) and only 1 of its 3 gene families (fam-found 1, fam0 3) was found in the bin
